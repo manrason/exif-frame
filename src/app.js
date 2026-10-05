@@ -135,10 +135,14 @@ const LAYOUT = {
   },
 };
 
-// Photos shown by the Collage template: every loaded photo (up to MAX_COLLAGE), or the example.
+// Photos shown by the Collage template: every loaded photo (up to MAX_COLLAGE). With fewer
+// than two, the photo (or the example) is padded with empty slots so the grid is visible.
 function collageItems() {
-  return S.photos.length ? S.photos.slice(0, MAX_COLLAGE) : [{ img: S.img, iw: S.iw, ih: S.ih, fields: S.fields }];
+  const items = S.photos.length ? S.photos.slice(0, MAX_COLLAGE) : [{ img: S.img, iw: S.iw, ih: S.ih, fields: S.fields }];
+  if (S.photos.length < 2) while (items.length < 4) items.push({ empty: true });
+  return items;
 }
+function collageReady() { return S.photos.length >= 2; }
 // Grid for the collage. With a fixed format, pick the column count whose cells come out
 // closest to square, so three photos in a 4:5 post don't become thin strips.
 function collageGrid(aspect) {
@@ -368,6 +372,15 @@ function render() {
       const r = Math.floor(i / g.cols), c = i % g.cols;
       const inRow = Math.min(g.cols, items.length - r * g.cols);
       const x = (W - (inRow * cw + (inRow - 1) * gap)) / 2 + c * (cw + gap), y = y0 + r * (ch + L.info + gap);
+      if (it.empty) {
+        ctx.save();
+        ctx.fillStyle = P.muted; ctx.globalAlpha = .12; ctx.fillRect(x, y, cw, ch); ctx.globalAlpha = 1;
+        ctx.strokeStyle = P.muted; ctx.lineWidth = 2 * s; ctx.setLineDash([10 * s, 8 * s]);
+        ctx.strokeRect(x + s, y + s, cw - 2 * s, ch - 2 * s);
+        ctx.restore();
+        text(ctx, '+ Add photo', x + cw / 2, y + ch / 2 + 8 * s, F.body(Math.min(24 * s, cw / 8)), P.muted, 'center');
+        return;
+      }
       drawCover(ctx, it.img, it.iw, it.ih, x, y, cw, ch);
       S.fields = it.fields;
       const { t1, t2 } = pick({ t1: v('camera'), t2: settingsLine('  '), t3: '', t4: '' });
@@ -582,8 +595,10 @@ function syncControls() {
   $('#keepExif').checked = S.keepExif;
   $('#textNote').hidden = S.template !== 'spec' || !S.custom.on;
   $('#collageNote').hidden = S.template !== 'collage';
-  $('#collageNote').textContent = S.photos.length > MAX_COLLAGE ? `The collage uses your first ${MAX_COLLAGE} photos.`
-    : S.photos.length < 2 ? 'Add two or more photos to build a collage.' : `${S.photos.length} photos in the collage.`;
+  $('#collageNote').classList.toggle('warn', !collageReady());
+  $('#collageMsg').textContent = S.photos.length > MAX_COLLAGE ? `The collage uses your first ${MAX_COLLAGE} photos.`
+    : !collageReady() ? 'A collage needs two or more photos. Pick several at once, or add them one by one.' : `${S.photos.length} photos in the collage.`;
+  $('#collageAdd').hidden = S.photos.length >= MAX_COLLAGE;
   renderStrip();
   $('#styleRow').closest('.group').hidden = toneBox.hidden && fontBox.hidden;
 }
@@ -754,6 +769,7 @@ function showSheet(blob, name) {
   $('#sheetImg').src = sheetUrl; $('#sheetLink').href = sheetUrl; $('#sheetLink').download = name;
   $('#sheet').hidden = false; $('#sheetClose').focus();
 }
+$('#collageAdd').addEventListener('click', () => $('#file').click());
 $('#sheetClose').addEventListener('click', () => $('#sheet').hidden = true);
 $('#sheet').addEventListener('click', e => { if (e.target.id === 'sheet') $('#sheet').hidden = true; });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') $('#sheet').hidden = true; });
@@ -786,6 +802,7 @@ async function offer(blob, name) {
   showSheet(blob, name);
 }
 $('#save').addEventListener('click', async () => {
+  if (S.template === 'collage' && !collageReady()) { toast('Add at least two photos to save a collage'); $('#file').click(); return; }
   const r = await exportCurrent();
   if (!r) { toast('The image could not be created. Try the 1080 px size.'); return; }
   offer(r.blob, r.name);
