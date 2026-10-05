@@ -27,12 +27,14 @@
         <span class="dims" id="dims">1080 × 1350 px</span>
         <div class="actions">
           <button type="button" id="copyCaption">Copy caption</button>
+          <button type="button" id="saveAll" hidden>Save all</button>
           <button type="button" class="primary" id="save">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 2v8m0 0L4.5 6.5M8 10l3.5-3.5M2.5 13.5h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             Save image
           </button>
         </div>
       </div>
+      <div class="strip" id="strip" hidden aria-label="Loaded photos"></div>
     </section>
 
     <aside class="controls" aria-label="Settings">
@@ -40,8 +42,8 @@
         <div class="label">Photo</div>
         <label class="drop" id="drop" for="file">
           <svg width="30" height="30" viewBox="0 0 30 30" fill="none" aria-hidden="true"><rect x="3" y="7" width="24" height="17" rx="3" stroke="currentColor" stroke-width="1.6"/><circle cx="15" cy="15.5" r="4.5" stroke="currentColor" stroke-width="1.6"/><path d="M10 7l1.8-3h6.4L20 7" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-          <span><strong id="fileName">Choose a photo</strong><small id="fileHint">JPEG straight from the camera works best. You can also drop it anywhere on the page.</small></span>
-          <input type="file" id="file" accept="image/*,.heic,.heif">
+          <span><strong id="fileName">Choose photos</strong><small id="fileHint">JPEG straight from the camera works best. Pick several to frame them all at once.</small></span>
+          <input type="file" id="file" accept="image/*,.heic,.heif" multiple>
         </label>
         <p class="note" id="exifNote">Showing an example. The values below are made up until you add a photo.</p>
       </div>
@@ -73,7 +75,20 @@
           <label class="tile"><input type="radio" name="template" id="t-backdrop" value="backdrop">
             <svg viewBox="0 0 40 50" fill="none"><rect x=".5" y=".5" width="39" height="49" rx="2" fill="currentColor" opacity=".3"/><rect x="7" y="9" width="26" height="22" rx="2" fill="currentColor" opacity=".8"/><rect x="13" y="36" width="14" height="2.5" fill="currentColor"/><rect x="11" y="41" width="18" height="1.5" fill="currentColor" opacity=".6"/></svg>
             Blur</label>
+          <label class="tile"><input type="radio" name="template" id="t-strap" value="strap">
+            <svg viewBox="0 0 40 50" fill="none"><rect x=".5" y=".5" width="39" height="49" rx="2" stroke="currentColor" opacity=".35"/><rect x="0" y="0" width="40" height="40" fill="currentColor" opacity=".55"/><rect x="4" y="44" width="11" height="2.5" fill="currentColor"/><rect x="24" y="44" width="12" height="2.5" fill="currentColor"/></svg>
+            Strap</label>
+          <label class="tile"><input type="radio" name="template" id="t-lightroom" value="lightroom">
+            <svg viewBox="0 0 40 50" fill="none"><rect x=".5" y=".5" width="39" height="49" rx="2" fill="currentColor" opacity=".85"/><rect x="3" y="14" width="22" height="18" fill="#9AA7A4"/><rect x="27" y="0" width="13" height="50" fill="#3a3a3a"/><path d="M28 16l3-4 2 3 2-5 3 6v1H28z" fill="#D8D8D8" opacity=".8"/><rect x="29" y="21" width="9" height="1.2" fill="#D8D8D8"/><rect x="29" y="25" width="9" height="1.2" fill="#D8D8D8" opacity=".6"/></svg>
+            Lightroom</label>
+          <label class="tile"><input type="radio" name="template" id="t-oneline" value="oneline">
+            <svg viewBox="0 0 40 50" fill="none"><rect x=".5" y=".5" width="39" height="49" rx="2" stroke="currentColor" opacity=".35"/><rect x="3" y="3" width="34" height="36" fill="currentColor" opacity=".55"/><rect x="9" y="43" width="22" height="2" fill="currentColor"/></svg>
+            One line</label>
+          <label class="tile"><input type="radio" name="template" id="t-collage" value="collage">
+            <svg viewBox="0 0 40 50" fill="none"><rect x=".5" y=".5" width="39" height="49" rx="2" stroke="currentColor" opacity=".35"/><rect x="4" y="5" width="15" height="15" fill="currentColor" opacity=".55"/><rect x="21" y="5" width="15" height="15" fill="currentColor" opacity=".55"/><rect x="4" y="26" width="15" height="15" fill="currentColor" opacity=".55"/><rect x="21" y="26" width="15" height="15" fill="currentColor" opacity=".55"/><rect x="4" y="21.5" width="9" height="1.5" fill="currentColor"/><rect x="21" y="21.5" width="9" height="1.5" fill="currentColor"/><rect x="4" y="42.5" width="9" height="1.5" fill="currentColor"/><rect x="21" y="42.5" width="9" height="1.5" fill="currentColor"/></svg>
+            Collage</label>
         </div>
+        <p class="note" id="collageNote" hidden></p>
       </div>
 
       <div class="group">
@@ -102,6 +117,45 @@
       </div>
 
       <div class="group">
+        <div class="label">Text</div>
+        <div class="chips" role="radiogroup" aria-label="Text lines">
+          <label class="chip"><input type="radio" name="textMode" id="tm-auto" value="auto" checked>Template's own</label>
+          <label class="chip"><input type="radio" name="textMode" id="tm-custom" value="custom">Custom lines</label>
+        </div>
+        <div class="custom" id="customBox" hidden>
+          <label class="line"><span>Main</span><input type="text" id="l1" autocomplete="off" spellcheck="false"></label>
+          <label class="line"><span>Settings</span><input type="text" id="l2" autocomplete="off" spellcheck="false"></label>
+          <label class="line"><span>Small</span><input type="text" id="l3" autocomplete="off" spellcheck="false"></label>
+          <div class="phchips" id="phChips" aria-label="Insert a detail">
+            <button type="button" data-ph="camera">camera</button><button type="button" data-ph="lens">lens</button><button type="button" data-ph="focal">focal</button><button type="button" data-ph="aperture">aperture</button><button type="button" data-ph="shutter">shutter</button><button type="button" data-ph="iso">iso</button><button type="button" data-ph="date">date</button><button type="button" data-ph="location">location</button><button type="button" data-ph="author">author</button>
+          </div>
+          <p class="note">Tap a detail to insert it where the cursor is. Empty details disappear along with the separator after them.</p>
+          <p class="note warn" id="textNote" hidden>Spec sheet always shows its table, so custom lines don't change it.</p>
+        </div>
+        <div class="row2">
+          <div>
+            <div class="label">Separator</div>
+            <div class="chips">
+              <label class="chip"><input type="radio" name="sep" id="sep-auto" value="auto" checked>Auto</label>
+              <label class="chip"><input type="radio" name="sep" id="sep-dot" value="·">·</label>
+              <label class="chip"><input type="radio" name="sep" id="sep-bar" value="|">|</label>
+              <label class="chip"><input type="radio" name="sep" id="sep-slash" value="/">/</label>
+            </div>
+          </div>
+          <div>
+            <div class="label"><label for="dateFmt">Date format</label></div>
+            <select id="dateFmt">
+              <option value="dots">2026.09.14 19:42</option>
+              <option value="iso">2026-09-14 19:42</option>
+              <option value="dmy">14/09/2026</option>
+              <option value="long">14 September 2026</option>
+              <option value="us">Sep 14, 2026</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="group">
         <div class="label">Details <span class="found" id="foundCount"></span></div>
         <div class="fields" id="fields"></div>
         <p class="note">Tick what appears on the image. Edit any value; your text is used as typed. Location stays off unless you turn it on.</p>
@@ -124,6 +178,7 @@
             </div>
           </div>
         </div>
+        <label class="check"><input type="checkbox" id="keepExif" checked><span>Keep the camera data in saved JPEGs <small>(GPS only when Location is ticked)</small></span></label>
         <p class="note">1080 px wide is what Instagram displays. Use 2160 for X, Threads or printing.</p>
       </div>
     </aside>

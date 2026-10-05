@@ -95,3 +95,22 @@ label.chip:has(input:checked) small { color: inherit; opacity: .7; }
 .sheet-card img { max-height: 60vh; width: auto; margin: 0 auto; display: block; }
 .sheet-card p { margin: 0; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* Batch strip */
+.strip { display: flex; gap: 8px; overflow-x: auto; padding-block: 2px 6px; }
+.thumb { position: relative; flex: none; }
+.thumb .pick { padding: 0; border-radius: 8px; overflow: hidden; width: 64px; height: 64px; border: 2px solid transparent; background: var(--stage); }
+.thumb .pick img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb.on .pick { border-color: var(--accent); }
+.thumb .drop-x { position: absolute; top: -6px; right: -6px; width: 22px; height: 22px; padding: 0; justify-content: center; border-radius: 50%; font-size: .9rem; line-height: 1; }
+button:disabled { opacity: .6; cursor: progress; }
+
+/* Text group */
+.custom { display: flex; flex-direction: column; gap: 8px; }
+.custom .line { display: grid; grid-template-columns: 70px minmax(0, 1fr); align-items: center; gap: 8px; font-size: .82rem; color: var(--muted); }
+.custom input, select { width: 100%; min-width: 0; font: 500 .85rem/1.2 var(--font-data); padding: 8px 9px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); }
+.phchips { display: flex; flex-wrap: wrap; gap: 5px; }
+.phchips button { font: 500 .75rem/1 var(--font-data); padding: 6px 8px; border-radius: 6px; }
+.check { display: flex; gap: 8px; align-items: flex-start; font-size: .85rem; cursor: pointer; }
+.check input { width: 17px; height: 17px; accent-color: var(--accent); margin: 1px 0 0; flex: none; }
+.check small { color: var(--muted); }
