@@ -79,7 +79,7 @@ function canvasSize(info, side, top) {
   const W = S.size;
   const k = S.ratio === 'orig' ? null : S.ratio.split(':').map(Number);
   if (k) return { W, H: Math.round(W * k[1] / k[0]) };
-  if (S.template === 'overlay') return { W, H: Math.round(W * S.ih / S.iw) };
+  if (S.template === 'overlay' || S.template === 'viewfinder') return { W, H: Math.round(W * S.ih / S.iw) };
   const pw = W - 2 * side;
   return { W, H: Math.round(top + pw * S.ih / S.iw + info) };
 }
@@ -100,7 +100,44 @@ const LAYOUT = {
   gallery: s => ({ side: 120 * s, top: 120 * s, info: 280 * s }),
   film: s => ({ side: 46 * s, top: 46 * s, info: 150 * s }),
   overlay: () => ({ side: 0, top: 0, info: 0 }),
+  viewfinder: () => ({ side: 0, top: 0, info: 0 }),
+  polaroid: s => ({ side: 56 * s, top: 56 * s, info: 250 * s }),
+  backdrop: s => ({ side: 96 * s, top: 96 * s, info: 250 * s }),
+  spec: s => {
+    const n = specRows().length, perCol = Math.ceil(n / (n > 4 ? 2 : 1));
+    return { side: 64 * s, top: 64 * s, info: (n ? 70 + perCol * 54 + 40 : 64) * s };
+  },
 };
+
+// Rows for the Spec sheet template: [label, value]
+function specRows() {
+  return [['Camera', 'camera'], ['Lens', 'lens'], ['Focal length', 'focal'], ['Aperture', 'aperture'], ['Shutter', 'shutter'],
+    ['ISO', 'iso'], ['Date', 'date'], ['Location', 'location'], ['By', 'author']]
+    .map(([label, k]) => [label, k === 'iso' ? v(k).replace(/^ISO\s*/i, '') : v(k)])
+    .filter(r => r[1]);
+}
+function roundRectPath(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h);
+}
+// Soft blurred copy of the photo covering the canvas. Downscale-then-upscale works in every browser.
+function drawBlurredCover(ctx, W, H) {
+  const k = Math.max(W / S.iw, H / S.ih);
+  const small = document.createElement('canvas');
+  small.width = 40; small.height = Math.max(1, Math.round(40 * H / W));
+  const sc = small.getContext('2d');
+  sc.imageSmoothingQuality = 'high';
+  const sk = small.width / W;
+  sc.drawImage(S.img, (W - S.iw * k) / 2 * sk, (H - S.ih * k) / 2 * sk, S.iw * k * sk, S.ih * k * sk);
+  const mid = document.createElement('canvas');
+  mid.width = Math.round(W / 6); mid.height = Math.round(H / 6);
+  const mc = mid.getContext('2d');
+  mc.imageSmoothingQuality = 'high';
+  if ('filter' in mc) mc.filter = `blur(${Math.round(mid.width / 60)}px)`;
+  mc.drawImage(small, -4, -4, mid.width + 8, mid.height + 8);
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(mid, 0, 0, W, H);
+}
 
 function render() {
   if (!S.img) return;
@@ -135,7 +172,89 @@ function render() {
     return { W, H };
   }
 
-  const P = S.template === 'film' ? { bg: '#121110', fg: '#EDE6D6', muted: '#8E8676', rule: '#333' } : TONES[S.tone];
+  if (S.template === 'viewfinder') {
+    const k = Math.max(W / S.iw, H / S.ih);
+    drawImg(ctx, (W - S.iw * k) / 2, (H - S.ih * k) / 2, S.iw * k, S.ih * k);
+    const u = Math.min(W, H) / 1080;
+    const hud = p => `600 ${p}px "IBM Plex Mono", monospace`;
+    const white = 'rgba(255,255,255,.95)';
+    const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * .35, W / 2, H / 2, Math.hypot(W, H) / 2);
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.35)');
+    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+    ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 6 * u;
+    // corner brackets
+    const inset = 44 * u, len = 64 * u, barH = 92 * u, bot = H - barH - 22 * u;
+    ctx.strokeStyle = white; ctx.lineWidth = Math.max(2, 3 * u); ctx.lineCap = 'square';
+    for (const [x, y, dx, dy] of [[inset, inset, 1, 1], [W - inset, inset, -1, 1], [inset, bot, 1, -1], [W - inset, bot, -1, -1]]) {
+      ctx.beginPath(); ctx.moveTo(x, y + dy * len); ctx.lineTo(x, y); ctx.lineTo(x + dx * len, y); ctx.stroke();
+    }
+    // focus point
+    const fw = 110 * u, fh = 80 * u, t = 18 * u;
+    ctx.lineWidth = Math.max(1.5, 2.5 * u); ctx.strokeStyle = '#8BFF7A';
+    for (const [x, y, dx, dy] of [[W / 2 - fw / 2, H / 2 - fh / 2, 1, 1], [W / 2 + fw / 2, H / 2 - fh / 2, -1, 1], [W / 2 - fw / 2, H / 2 + fh / 2, 1, -1], [W / 2 + fw / 2, H / 2 + fh / 2, -1, -1]]) {
+      ctx.beginPath(); ctx.moveTo(x, y + dy * t); ctx.lineTo(x, y); ctx.lineTo(x + dx * t, y); ctx.stroke();
+    }
+    // top row: mode, camera, date
+    const ty = inset + 58 * u, maxTop = W - 2 * inset - 220 * u;
+    text(ctx, 'M', inset + 26 * u, ty, hud(30 * u), white);
+    let top = joinNon('  ·  ', v('camera'), v('lens'));
+    let tf = 22 * u; const tw = measure(ctx, top, hud(tf)); if (tw > maxTop) tf *= maxTop / tw;
+    text(ctx, top, W / 2, ty - 4 * u, hud(tf), white, 'center');
+    const dt = v('date').replace(/\s+\d{2}:\d{2}$/, '');
+    text(ctx, dt, W - inset - 26 * u, ty - 4 * u, hud(20 * u), white, 'right');
+    // bottom readout bar
+    const by = H - barH;
+    ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
+    ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(0, by, W, barH);
+    const items = ['shutter', 'aperture', 'iso', 'focal'].map(v).filter(Boolean).map(x => x.replace(/s$/, '').replace(/^f\//, 'F'));
+    if (items.length) {
+      let fs = 34 * u; const total = items.reduce((a, x) => a + measure(ctx, x, hud(fs)), 0), room = W - 2 * inset;
+      if (total > room * .8) fs *= room * .8 / total;
+      items.forEach((x, i) => text(ctx, x, inset + room * (i + .5) / items.length, by + barH / 2 + fs * .36, hud(fs), white, 'center'));
+    }
+    // exposure scale above the bar
+    const sy = by - 34 * u, step = 26 * u;
+    ctx.fillStyle = white; ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 6 * u;
+    for (let i = -9; i <= 9; i++) {
+      const hgt = i % 3 === 0 ? 16 * u : 8 * u;
+      ctx.fillRect(W / 2 + i * step - u, sy - hgt, Math.max(1, 2 * u), hgt);
+    }
+    ['-3', '0', '+3'].forEach((lab, i) => text(ctx, lab, W / 2 + (i - 1) * 9 * step, sy - 24 * u, hud(15 * u), white, 'center'));
+    ctx.beginPath(); ctx.moveTo(W / 2, sy + 4 * u); ctx.lineTo(W / 2 - 7 * u, sy + 15 * u); ctx.lineTo(W / 2 + 7 * u, sy + 15 * u); ctx.closePath(); ctx.fill();
+    text(ctx, v('author'), W - inset - 26 * u, sy - 24 * u, hud(18 * u), white, 'right');
+    text(ctx, v('location'), inset + 26 * u, sy - 24 * u, hud(18 * u), white);
+    ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
+    return { W, H };
+  }
+
+  if (S.template === 'backdrop') {
+    drawBlurredCover(ctx, W, H);
+    ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.fillRect(0, 0, W, H);
+    const b = placeWithInfo(W, H, L.side, L.top, L.info);
+    const r = 22 * s;
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 60 * s; ctx.shadowOffsetY = 24 * s;
+    roundRectPath(ctx, b.px, b.py, b.pw, b.ph, r); ctx.fillStyle = '#000'; ctx.fill();
+    ctx.restore();
+    ctx.save(); roundRectPath(ctx, b.px, b.py, b.pw, b.ph, r); ctx.clip(); drawImg(ctx, b.px, b.py, b.pw, b.ph); ctx.restore();
+    const cx = W / 2, maxW = W - 2 * L.side;
+    const t1 = v('camera'), t2 = settingsLine('   '), t3 = joinNon('  ·  ', v('lens'), v('date'), v('location')), t4 = v('author');
+    let m = 1;
+    const ww = Math.max(measure(ctx, t1, F.title(42 * s)), measure(ctx, t2, F.data(28 * s)), measure(ctx, t3, F.body(21 * s)));
+    if (ww > maxW) m = maxW / ww;
+    ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 10 * s;
+    let y = b.py + b.ph + 92 * s;
+    if (t1) { text(ctx, t1, cx, y, F.title(42 * s * m), '#FFFFFF', 'center'); y += 50 * s * m; }
+    if (t2) { text(ctx, t2, cx, y, F.data(28 * s * m), 'rgba(255,255,255,.92)', 'center'); y += 40 * s * m; }
+    if (t3) { text(ctx, t3, cx, y, F.body(21 * s * m), 'rgba(255,255,255,.72)', 'center'); y += 34 * s * m; }
+    if (t4) text(ctx, t4, cx, y, F.body(21 * s * m), 'rgba(255,255,255,.72)', 'center');
+    ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
+    return { W, H };
+  }
+
+  const P = S.template === 'film' ? { bg: '#121110', fg: '#EDE6D6', muted: '#8E8676', rule: '#333' }
+    : S.template === 'polaroid' ? (S.tone === 'dark' ? { bg: '#1A1A1A', fg: '#ECECEC', muted: '#9A9A9A' } : { bg: '#F6F4EE', fg: '#1E2A47', muted: '#55607A' })
+    : TONES[S.tone];
   ctx.fillStyle = P.bg; ctx.fillRect(0, 0, W, H);
   const b = placeWithInfo(W, H, L.side, L.top, L.info);
   drawImg(ctx, b.px, b.py, b.pw, b.ph);
@@ -201,6 +320,46 @@ function render() {
         ctx.restore();
       }
     }
+  } else if (S.template === 'polaroid') {
+    // handwritten marker notes on the thick bottom edge
+    const hand = p => `600 ${p}px Caveat, "Segoe Print", "Bradley Hand", cursive`;
+    const t1 = joinNon(' + ', v('camera'), v('lens')), t2 = settingsLine('  ·  '), t3 = joinNon('  ·  ', v('date').replace(/\s+\d{2}:\d{2}$/, ''), v('location')), t4 = v('author');
+    const maxW = b.pw - 20 * s;
+    let m = 1;
+    const ww = Math.max(measure(ctx, t1, hand(50 * s)), measure(ctx, t2, hand(42 * s)), measure(ctx, t3, hand(34 * s)) + measure(ctx, t4, hand(34 * s)) + 40 * s);
+    if (ww > maxW) m = maxW / ww;
+    ctx.save();
+    ctx.translate(b.px + 10 * s, below + 82 * s);
+    ctx.rotate(-0.012);
+    text(ctx, t1, 0, 0, hand(50 * s * m), P.fg);
+    text(ctx, t2, 0, 54 * s * m, hand(42 * s * m), P.fg);
+    text(ctx, t3, 0, 104 * s * m, hand(34 * s * m), P.muted);
+    text(ctx, t4, b.pw - 20 * s, 104 * s * m, hand(34 * s * m), P.muted, 'right');
+    ctx.restore();
+  } else if (S.template === 'spec') {
+    const rows = specRows();
+    if (rows.length) {
+      const cols = rows.length > 4 ? 2 : 1, perCol = Math.ceil(rows.length / cols);
+      const tw = Math.max(b.pw, Math.min(W - 2 * L.side, W * .7)), x0 = (W - tw) / 2, gap = 48 * s;
+      const cw = (tw - gap * (cols - 1)) / cols, rh = 54 * s;
+      const labF = p => `500 ${p}px "IBM Plex Mono", monospace`;
+      let m = 1;
+      for (const [lab, val] of rows) {
+        const need = measure(ctx, lab.toUpperCase(), labF(15 * s)) + 24 * s + measure(ctx, val, F.data(23 * s));
+        if (need > cw) m = Math.min(m, cw / need);
+      }
+      const y0 = below + 58 * s;
+      rows.forEach(([lab, val], i) => {
+        const c = Math.floor(i / perCol), r = i % perCol;
+        const x = x0 + c * (cw + gap), y = y0 + r * rh;
+        ctx.fillStyle = P.rule; ctx.fillRect(x, y, cw, Math.max(1, 1.5 * s));
+        setSpacing(ctx, 1.6 * s * m);
+        text(ctx, lab.toUpperCase(), x, y + rh * .62, labF(15 * s * m), P.muted);
+        setSpacing(ctx, 0);
+        text(ctx, val, x + cw, y + rh * .64, F.data(23 * s * m), P.fg, 'right');
+      });
+      for (let c = 0; c < cols; c++) { ctx.fillStyle = P.rule; ctx.fillRect(x0 + c * (cw + gap), y0 + perCol * rh, cw, Math.max(1, 1.5 * s)); }
+    }
   }
   return { W, H };
 }
@@ -233,7 +392,10 @@ function syncControls() {
     cb.checked = !!S.show[k]; tx.value = S.fields[k] || ''; tx.placeholder = PLACEHOLDER[k] || '';
     tx.closest('.field').classList.toggle('off', !S.show[k]);
   }
-  $('#styleRow').querySelector('div').hidden = S.template === 'film' || S.template === 'overlay';
+  const [toneBox, fontBox] = $('#styleRow').children;
+  toneBox.hidden = !['frame', 'gallery', 'polaroid', 'spec'].includes(S.template);
+  fontBox.hidden = ['film', 'viewfinder', 'polaroid'].includes(S.template);
+  $('#styleRow').closest('.group').hidden = toneBox.hidden && fontBox.hidden;
 }
 
 document.querySelector('.controls').addEventListener('change', e => {
@@ -375,7 +537,7 @@ S.dateObj = { y: '2026', mo: '09', d: '14', h: '19', mi: '42' };
 syncControls();
 schedule();
 if (document.fonts) {
-  Promise.all(['700 20px Archivo', '400 20px Archivo', '600 20px Archivo', '500 20px "IBM Plex Mono"', '600 20px "IBM Plex Mono"', 'italic 400 20px "Instrument Serif"', '400 20px "Instrument Serif"']
+  Promise.all(['700 20px Archivo', '400 20px Archivo', '600 20px Archivo', '500 20px "IBM Plex Mono"', '600 20px "IBM Plex Mono"', 'italic 400 20px "Instrument Serif"', '400 20px "Instrument Serif"', '600 20px Caveat']
     .map(f => document.fonts.load(f).catch(() => null))).then(schedule);
   document.fonts.ready.then(schedule);
 }

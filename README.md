@@ -6,7 +6,15 @@ Everything runs in the browser. Photos are never uploaded.
 
 ## Features
 
-- **Templates:** Frame (white or black border with a data bar), Gallery (centered museum caption), Overlay (text over the photo), Film (dark border with an orange date stamp).
+- **Templates:**
+  - Frame: white or black border with a data bar
+  - Gallery: centered museum caption
+  - Overlay: text over the bottom of the photo
+  - Film: dark border with an orange date stamp
+  - Polaroid: instant-print border with handwritten notes
+  - Viewfinder: camera screen look with focus point, exposure scale and readouts
+  - Spec sheet: the photo above a two-column table of every setting
+  - Blur: the photo floating on a blurred copy of itself (good for stories)
 - **Formats:** original shape, 1:1, 4:5, 3:4, 9:16 (stories), 16:9, at 1080 or 2160 px wide, saved as JPEG or PNG.
 - **Editable details:** every value can be edited or hidden. Location is off by default.
 - **Copy caption:** puts the shot details on the clipboard as text for the post.
