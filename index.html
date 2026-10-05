@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Exif Frame</title>
 <meta name="description" content="Frame your photos with their camera, lens and exposure data for social media.">
+<meta name="theme-color" content="#EDF1F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101514" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Exif Frame">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=Caveat:wght@600&display=swap">
@@ -188,9 +197,10 @@
 <div class="sheet" id="sheet" hidden>
   <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
     <p><strong id="sheetTitle">Your image is ready</strong></p>
-    <p class="note">Press and hold the image (phone) or right-click it (computer) and choose Save image.</p>
+    <p class="note" id="sheetHint">Press and hold the image (phone) or right-click it (computer) and choose Save image.</p>
     <img id="sheetImg" alt="Framed photo, ready to save">
     <div class="actions">
+      <button type="button" class="primary" id="sheetShare" hidden>Save to Photos</button>
       <a class="btn" id="sheetLink" download="exif-frame.jpg">Download</a>
       <button type="button" id="sheetClose">Close</button>
     </div>

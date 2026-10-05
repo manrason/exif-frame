@@ -27,6 +27,10 @@ Everything runs in the browser. Photos are never uploaded.
 - **Copy caption:** puts the shot details on the clipboard as text for the post.
 - Reads EXIF from JPEG, HEIC, PNG, WebP and TIFF with a small built-in parser (no dependencies).
 
+## Install on iPhone
+
+Open https://manrason.github.io/exif-frame/ in Safari, tap the Share button, then **Add to Home Screen**. It opens full screen like an app and works without a connection. On a phone, **Save image** and **Save all** open the share sheet, where **Save Image** puts the framed photos straight into Photos.
+
 ## Run it locally
 
 The page uses ES modules, so it needs to be served over HTTP (opening `index.html` from disk won't load the scripts):
@@ -54,6 +58,8 @@ Tests use Node's built-in test runner (Node 20+) against small JPEG fixtures in 
 | `src/exif.js` | EXIF reader/writer, value formatters (camera names, shutter speed, dates, GPS) and line templates |
 | `src/zip.js` | Minimal ZIP writer for batch downloads |
 | `src/app.js` | UI, template rendering on canvas, export |
+| `manifest.webmanifest`, `icons/` | Home-screen install (name, icon, full-screen mode) |
+| `sw.js` | Service worker: network first, cached copy when offline |
 | `tests/` | Unit tests and fixture photos |
 
 ### Adding a template

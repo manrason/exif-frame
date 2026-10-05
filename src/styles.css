@@ -29,7 +29,7 @@
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--font-ui); padding-inline: 16px; padding-block: 20px 40px; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--font-ui); padding: calc(env(safe-area-inset-top, 0px) + 20px) calc(env(safe-area-inset-right, 0px) + 16px) calc(env(safe-area-inset-bottom, 0px) + 40px) calc(env(safe-area-inset-left, 0px) + 16px); }
 .wrap { max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
 header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 h1 { margin: 0; font: italic 400 2.1rem/1 var(--font-display); letter-spacing: .01em; }
