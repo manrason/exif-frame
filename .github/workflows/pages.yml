@@ -27,11 +27,11 @@ jobs:
         # style URLs with the commit makes every deploy load matching files, instead
         # of a new page running an old cached script.
         run: |
-          mkdir _site && cp -r index.html src _site/
+          mkdir _site && cp -r index.html src icons manifest.webmanifest sw.js _site/
           v="${GITHUB_SHA::8}"
           sed -i "s#src/styles.css#src/styles.css?v=$v#; s#src/app.js#src/app.js?v=$v#" _site/index.html
-          sed -i "s#'./exif.js'#'./exif.js?v=$v'#" _site/src/app.js
-          grep -q "app.js?v=$v" _site/index.html && grep -q "exif.js?v=$v" _site/src/app.js
+          sed -i "s#'./exif.js'#'./exif.js?v=$v'#; s#'./zip.js'#'./zip.js?v=$v'#" _site/src/app.js
+          grep -q "app.js?v=$v" _site/index.html && grep -q "exif.js?v=$v" _site/src/app.js && grep -q "zip.js?v=$v" _site/src/app.js
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
       - id: deployment

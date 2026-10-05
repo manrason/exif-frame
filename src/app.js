@@ -762,13 +762,35 @@ function directDownload(blob, name) {
   a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
-let sheetUrl = '';
-function showSheet(blob, name) {
-  if (sheetUrl) URL.revokeObjectURL(sheetUrl);
-  sheetUrl = URL.createObjectURL(blob);
-  $('#sheetImg').src = sheetUrl; $('#sheetLink').href = sheetUrl; $('#sheetLink').download = name;
-  $('#sheet').hidden = false; $('#sheetClose').focus();
+// On phones (iPhone especially) a download lands in Files, not Photos. The share sheet
+// has "Save Image", so images go there when the browser can share files.
+const isPhone = matchMedia('(pointer: coarse)').matches;
+function shareable(files) {
+  try { return !inArtifact && isPhone && !!navigator.canShare && navigator.canShare({ files }); } catch (e) { return false; }
 }
+// Resolves 'shared', 'cancelled', or 'blocked' (the tap that started it has expired).
+async function shareFiles(files) {
+  try { await navigator.share({ files }); return 'shared'; }
+  catch (err) { return err && err.name === 'AbortError' ? 'cancelled' : 'blocked'; }
+}
+let sheetUrl = '', sheetFiles = null;
+function showSheet(blob, name, files) {
+  if (sheetUrl) URL.revokeObjectURL(sheetUrl);
+  sheetUrl = blob ? URL.createObjectURL(blob) : '';
+  sheetFiles = files || null;
+  const many = files && files.length > 1;
+  $('#sheetTitle').textContent = many ? `${files.length} images are ready` : 'Your image is ready';
+  $('#sheetHint').textContent = files ? 'Tap Save to Photos, then choose Save Image.' : 'Press and hold the image (phone) or right-click it (computer) and choose Save image.';
+  $('#sheetImg').hidden = !blob; if (blob) $('#sheetImg').src = sheetUrl;
+  $('#sheetLink').hidden = !blob || !!files; if (blob) { $('#sheetLink').href = sheetUrl; $('#sheetLink').download = name; }
+  $('#sheetShare').hidden = !files;
+  $('#sheet').hidden = false; (files ? $('#sheetShare') : $('#sheetClose')).focus();
+}
+$('#sheetShare').addEventListener('click', async () => {
+  if (!sheetFiles) return;
+  const r = await shareFiles(sheetFiles);
+  if (r === 'shared') { $('#sheet').hidden = true; toast('Shared'); }
+});
 $('#collageAdd').addEventListener('click', () => $('#file').click());
 $('#sheetClose').addEventListener('click', () => $('#sheet').hidden = true);
 $('#sheet').addEventListener('click', e => { if (e.target.id === 'sheet') $('#sheet').hidden = true; });
@@ -797,6 +819,12 @@ async function offer(blob, name) {
       if (c === 'declined') { toast('Save cancelled'); return; }
       if (c === 'rate_limited') { toast('A save prompt is already open'); return; }
     }
+  }
+  const files = [new File([blob], name, { type: blob.type })];
+  if (shareable(files)) {
+    const r = await shareFiles(files);
+    if (r === 'blocked') showSheet(blob, name, files);
+    return;
   }
   if (!inArtifact) { directDownload(blob, name); toast(`Saved ${name}`); return; }
   showSheet(blob, name);
@@ -827,6 +855,13 @@ $('#saveAll').addEventListener('click', async () => {
     activate(keep); btn.disabled = false; syncControls(); schedule();
   }
   if (!files.length) { toast('The images could not be created. Try the 1080 px size.'); return; }
+  // On a phone, hand every image to the share sheet so they can go straight to Photos.
+  const each = files.map(f => new File([f.data], f.name, { type: /\.png$/.test(f.name) ? 'image/png' : 'image/jpeg' }));
+  if (shareable(each)) {
+    const r = await shareFiles(each);
+    if (r === 'blocked') showSheet(null, '', each);
+    return;
+  }
   offer(new Blob([makeZip(files)], { type: 'application/zip' }), `exif-frame-${files.length}-photos.zip`);
 });
 
@@ -858,4 +893,9 @@ if (document.fonts) {
   Promise.all(['700 20px Archivo', '400 20px Archivo', '600 20px Archivo', '500 20px "IBM Plex Mono"', '600 20px "IBM Plex Mono"', 'italic 400 20px "Instrument Serif"', '400 20px "Instrument Serif"', '600 20px Caveat']
     .map(f => document.fonts.load(f).catch(() => null))).then(schedule);
   document.fonts.ready.then(schedule);
+}
+
+// Installed on a phone's home screen, the app keeps working without a connection.
+if ('serviceWorker' in navigator && !inArtifact && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
 }
