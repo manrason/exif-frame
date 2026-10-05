@@ -27,6 +27,7 @@ const store = {
 const saved = store.get();
 if (saved) {
   for (const k of ['template', 'ratio', 'tone', 'font', 'format']) if (typeof saved[k] === 'string') S[k] = saved[k];
+  if (!document.querySelector(`input[name="template"][value="${CSS.escape(S.template)}"]`)) S.template = 'frame';
   if (saved.size === 1080 || saved.size === 2160) S.size = saved.size;
   if (saved.show) for (const k in S.show) if (k !== 'location' && typeof saved.show[k] === 'boolean') S.show[k] = saved.show[k];
 }
